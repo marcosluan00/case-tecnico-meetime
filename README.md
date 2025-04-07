@@ -129,9 +129,9 @@ Se preferir, você pode executar a aplicação usando Docker para evitar configu
      ```
    - **Descrição**: Cria o contato no HubSpot.
 
-2. **Listar Contatos**  
-   **GET** `/contacts`
-   - **Descrição**: Retorna todos os contatos armazenados no HubSpot.
+2. - **Listar Contatos**  
+     **GET** `/contacts`
+- **Descrição**: Retorna todos os contatos armazenados no HubSpot.
 
 ---
 

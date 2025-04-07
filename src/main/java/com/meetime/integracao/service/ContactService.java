@@ -21,7 +21,7 @@ public class ContactService {
     }
 
     public String createContact(Map<String, Object> contactData) {
-        String accessToken = tokenStorage.getAccessToken(); // Obter token automaticamente
+        String accessToken = tokenStorage.getAccessToken();
         String url = this.hubSpotConfig.getApiUrl()+"/crm/v3/objects/contacts";
 
         HttpHeaders headers = new HttpHeaders();

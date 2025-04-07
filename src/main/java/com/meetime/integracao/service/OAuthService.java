@@ -2,6 +2,7 @@ package com.meetime.integracao.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.meetime.integracao.config.HubSpotConfig;
+import com.meetime.integracao.exception.OAuthException;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -12,6 +13,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -21,28 +23,27 @@ public class OAuthService {
 
     private final HubSpotConfig hubSpotConfig;
     private final RestTemplate restTemplate;
+    private final TokenStorage tokenStorage ;
 
-    public OAuthService(HubSpotConfig hubSpotConfig, RestTemplate restTemplate) {
+    public OAuthService(HubSpotConfig hubSpotConfig, RestTemplate restTemplate, TokenStorage tokenStorage) {
         this.hubSpotConfig = hubSpotConfig;
         this.restTemplate = restTemplate;
+        this.tokenStorage = tokenStorage;
     }
 
     public String gerarAuthorizationUrl() {
         String state = UUID.randomUUID().toString();
 
-        String authorizationUrl = UriComponentsBuilder.fromHttpUrl(hubSpotConfig.getAuthorizeUrl())
+        return UriComponentsBuilder.fromUriString(hubSpotConfig.getAuthorizeUrl())
                 .queryParam("client_id", hubSpotConfig.getCliendId())
                 .queryParam("redirect_uri", hubSpotConfig.getRedirectUri())
                 .queryParam("scope", String.join(" ", hubSpotConfig.getScope()))
                 .queryParam("state", state)
                 .toUriString();
-
-        return authorizationUrl;
     }
 
-
-    public String exchangeCodeForAccessToken(String code) {
-        String tokenUrl = "https://api.hubapi.com/oauth/v1/token";
+    public Map<String, String> exchangeCodeForAccessToken(String code) {
+        String tokenUrl = hubSpotConfig.getApiUrl() + "/oauth/v1/token";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
@@ -57,23 +58,54 @@ public class OAuthService {
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(requestBody, headers);
 
         try {
-             ResponseEntity<String> response = restTemplate.postForEntity(tokenUrl, request, String.class);
+            ResponseEntity<String> response = restTemplate.postForEntity(tokenUrl, request, String.class);
 
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-
-                ObjectMapper objectMapper = new ObjectMapper();
-                Map<String, Object> responseBody = objectMapper.readValue(response.getBody(), Map.class);
-
-                return responseBody.get("access_token") != null ? responseBody.get("access_token").toString() : null;
-            } else {
-                System.err.println("API retornou erro com status: " + response.getStatusCode());
-                System.err.println("Resposta (Body): " + response.getBody());
-                return null;
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                throw new OAuthException("Erro ao autenticar: status " + response.getStatusCode());
             }
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            Map<String, Object> responseBody = objectMapper.readValue(response.getBody(), Map.class);
+
+            Map<String, String> tokens = new HashMap<>();
+            tokens.put("access_token", responseBody.get("access_token").toString());
+            tokens.put("refresh_token", responseBody.get("refresh_token").toString());
+            return tokens;
         } catch (Exception e) {
-            System.err.println("Erro ao trocar código por token: " + e.getMessage());
-            e.printStackTrace();
-            return null;
+            throw new OAuthException("Erro ao trocar o código por tokens.", e);
+        }
+    }
+
+    public String refreshAccessToken() {
+        String tokenUrl = hubSpotConfig.getApiUrl() + "/oauth/v1/token";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
+        requestBody.add("grant_type", "refresh_token");
+        requestBody.add("client_id", hubSpotConfig.getCliendId());
+        requestBody.add("client_secret", hubSpotConfig.getClientSecret());
+        requestBody.add("refresh_token", tokenStorage.getRefreshToken());
+
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(requestBody, headers);
+
+        try {
+            ResponseEntity<String> response = restTemplate.postForEntity(tokenUrl, request, String.class);
+
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                throw new OAuthException("Erro ao renovar o token: " + response.getStatusCode());
+            }
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            Map<String, Object> responseBody = objectMapper.readValue(response.getBody(), Map.class);
+
+            String newAccessToken = responseBody.get("access_token").toString();
+            tokenStorage.saveTokens(newAccessToken, tokenStorage.getRefreshToken());
+
+            return newAccessToken;
+        } catch (Exception e) {
+            throw new OAuthException("Erro inesperado ao renovar o token.", e);
         }
     }
 

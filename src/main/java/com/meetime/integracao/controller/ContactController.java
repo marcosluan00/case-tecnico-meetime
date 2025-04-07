@@ -2,10 +2,6 @@ package com.meetime.integracao.controller;
 
 import com.meetime.integracao.dto.ContactDTO;
 import com.meetime.integracao.service.ContactService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,7 +31,6 @@ public class ContactController {
 
     @PostMapping("/webhook")
     public String handleWebhook(@RequestBody List<Map<String, Object>> webhookData) {
-        //Não fiz nenhuma tratativa para os webhooks apenas recebendo e printando
         if (webhookData == null || webhookData.isEmpty()) {
             System.out.println("Webhook recebido sem eventos.");
             return "Nenhum evento para processar.";
