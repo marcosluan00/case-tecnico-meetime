@@ -148,3 +148,34 @@ Se preferir, você pode executar a aplicação usando Docker para evitar configu
 3. Melhoria na segurança, como suporte a HTTPS nativo.
 
 ---
+## 🛠️ Justificativa do Uso de Bibliotecas
+
+Este projeto priorizou o uso de bibliotecas já integradas ao Spring Boot para simplificar a implementação e garantir robustez. A seguir, apresentamos as principais bibliotecas utilizadas e o motivo da escolha:
+
+1. **Spring Boot Starter Web**
+   - Justificativa: Biblioteca essencial para construir APIs REST de forma rápida e eficiente. Simplifica toda a configuração de servidores HTTP, roteamentos e integrações com endpoints.
+   - **Uso no projeto**:
+      - Configuração dos endpoints REST para gerenciamento de contatos e manipulação dos fluxos `GET` e `POST`.
+
+2. **Spring Boot Starter Validation**
+   - Justificativa: Fornece suporte para validação de dados em APIs REST, sendo amplamente utilizada junto às anotações de validação do Jakarta Validation (ex.: `@NotNull`, `@Email`, etc.).
+   - **Uso no projeto**:
+      - Validação de dados de entrada nos endpoints, como o `POST /contacts`, garantindo que informações obrigatórias (ex.: `email`, `firstName`, etc.) sejam corretamente inseridas.
+
+3. **Spring Boot Starter JSON**
+   - Justificativa: Responsável por manipular (serializar e desserializar) os objetos JSON de entrada e saída. O Spring Boot usa internamente bibliotecas como Jackson para realizar essa funcionalidade.
+   - **Uso no projeto**:
+      - Conversão de objetos Java para JSON ao responder aos clientes.
+      - Interpretação das respostas recebidas da API do HubSpot.
+
+4. **Bucket4J - Controle de Rate Limiting**
+   - Justificativa: Única dependência externa não diretamente fornecida pelo Spring Boot. Foi escolhida por ser uma solução simples, eficiente e de alto desempenho para implementar limites de solicitações (`Rate Limiting`).
+   - **Uso no projeto**:
+      - Controle de limite de requisições por cliente, protegendo a API contra abuso ou excesso de chamadas, o que é fundamental em integrações com APIs externas como o HubSpot.
+
+5. **Maven**
+   - Justificativa: Ferramenta utilizada para gerenciar todas as dependências e a construção da aplicação. Foi escolhida por ser amplamente utilizada em projetos Java e compatível com o Spring Boot.
+   - **Uso no projeto**:
+      - Compilação, empacotamento da aplicação (`.jar`) e execução.
+
+
